@@ -34,10 +34,14 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Something went wrong!' });
 });
 
-const PORT = process.env.PORT || 5000;
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`\n🗳️  Online Voting System Server`);
-  console.log(`   Running on port ${PORT}`);
-  console.log(`   API: http://localhost:${PORT}/api\n`);
-});
+  app.listen(PORT, () => {
+    console.log(`\n🗳️  Online Voting System Server`);
+    console.log(`   Running on port ${PORT}`);
+    console.log(`   API: http://localhost:${PORT}/api\n`);
+  });
+}
+
+module.exports = app;
