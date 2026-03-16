@@ -7,9 +7,19 @@ const connectDB = require('./config/db');
 dotenv.config();
 
 // Connect to MongoDB
-connectDB();
+try {
+  connectDB();
+} catch (e) {
+  console.error("DB Init failed", e);
+}
 
 const app = express();
+
+// Middleware to ensure DB connection
+app.use(async (req, res, next) => {
+  await connectDB();
+  next();
+});
 
 // Middleware
 app.use(cors());
