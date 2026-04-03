@@ -57,4 +57,44 @@ const sendOTPEmail = async (email, otp) => {
   }
 };
 
-module.exports = { generateOTP, getOTPExpiry, sendOTPEmail };
+const sendResetPasswordEmail = async (email, otp) => {
+  try {
+    const transporter = nodemailer.createTransport({
+      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+      port: process.env.EMAIL_PORT || 587,
+      secure: false,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    const mailOptions = {
+      from: `"VoteSecure Support" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: 'Reset Your VoteSecure Password',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
+          <h2 style="color: #4f46e5; text-align: center;">Reset Your Password</h2>
+          <p>Hello,</p>
+          <p>We received a request to reset your password for your VoteSecure account. Use the following One-Time Password (OTP) to complete the reset. This code is valid for 10 minutes.</p>
+          <div style="background-color: #f1f5f9; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0;">
+            <h1 style="letter-spacing: 5px; color: #1e293b; margin: 0;">${otp}</h1>
+          </div>
+          <p>If you did not request this, please ignore this email. Your password will remain unchanged.</p>
+          <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+          <p style="font-size: 12px; color: #64748b; text-align: center;">© ${new Date().getFullYear()} VoteSecure Voting System</p>
+        </div>
+      `,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`Reset Email sent successfully to ${email}`);
+    return true;
+  } catch (error) {
+    console.error('Error sending reset email:', error);
+    return false;
+  }
+};
+
+module.exports = { generateOTP, getOTPExpiry, sendOTPEmail, sendResetPasswordEmail };

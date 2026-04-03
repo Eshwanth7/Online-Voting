@@ -1,4 +1,32 @@
+# Dependency directories
 node_modules/
+**/node_modules/
+
+# Local env files
 .env
+**/.env
+**/.env.local
+**/.env.*
+
+# Build outputs
 dist/
+**/dist/
+build/
+**/build/
+
+# IDE files
+.vscode/
+.idea/
 .DS_Store
+
+# Vercel directories
+.vercel/
+**/.vercel/
+
+# Test scripts
+test_reg.js
+test-api.js
+test-email.js
+**/test_*.js
+**/test-*-*.js
+**/test-*.js

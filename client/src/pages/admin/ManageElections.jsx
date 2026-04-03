@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import API from '../../api/axios'
+import AnimatedPage, { fadeInUp } from '../../components/AnimatedPage'
 
 function ManageElections() {
   const [elections, setElections] = useState([])
@@ -81,28 +83,44 @@ function ManageElections() {
   }
 
   if (loading) {
-    return <div className="loading-container"><div className="spinner"></div></div>
+    return (
+      <div className="loading-container">
+        <motion.div className="spinner" initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'spring' }} />
+      </div>
+    )
   }
 
   return (
-    <div className="animate-in">
-      <div className="action-row">
+    <AnimatedPage>
+      <motion.div className="action-row" variants={fadeInUp}>
         <div>
           <h1>Manage Elections</h1>
           <p style={{ color: 'var(--text-secondary)' }}>Create and manage all elections</p>
         </div>
-        <button className="btn btn-primary" onClick={openCreate}>
+        <motion.button
+          className="btn btn-primary"
+          onClick={openCreate}
+          whileHover={{ scale: 1.05, y: -2 }}
+          whileTap={{ scale: 0.95 }}
+        >
           + Create Election
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
 
       {elections.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-icon">🗳️</div>
+        <motion.div className="empty-state" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
+          <motion.div className="empty-icon" animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity }}>
+            🗳️
+          </motion.div>
           <p>No elections yet. Create your first election!</p>
-        </div>
+        </motion.div>
       ) : (
-        <div className="table-container">
+        <motion.div
+          className="table-container"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
           <table>
             <thead>
               <tr>
@@ -115,12 +133,18 @@ function ManageElections() {
               </tr>
             </thead>
             <tbody>
-              {elections.map(el => {
+              {elections.map((el, index) => {
                 const now = new Date()
                 const isOngoing = el.isActive && new Date(el.startDate) <= now && new Date(el.endDate) >= now
                 const isEnded = new Date(el.endDate) < now
                 return (
-                  <tr key={el._id}>
+                  <motion.tr
+                    key={el._id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.3 + index * 0.06 }}
+                    whileHover={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
+                  >
                     <td style={{ fontWeight: '500' }}>{el.title}</td>
                     <td style={{ color: 'var(--text-secondary)', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {el.description || '—'}
@@ -134,91 +158,82 @@ function ManageElections() {
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <Link to={`/admin/candidates/${el._id}`} className="btn btn-secondary btn-sm">
-                          Candidates
-                        </Link>
-                        <button className="btn btn-secondary btn-sm" onClick={() => openEdit(el)}>
+                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                          <Link to={`/admin/candidates/${el._id}`} className="btn btn-secondary btn-sm">Candidates</Link>
+                        </motion.div>
+                        <motion.button className="btn btn-secondary btn-sm" onClick={() => openEdit(el)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                           Edit
-                        </button>
-                        <button className="btn btn-danger btn-sm" onClick={() => handleDelete(el._id)}>
+                        </motion.button>
+                        <motion.button className="btn btn-danger btn-sm" onClick={() => handleDelete(el._id)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                           Delete
-                        </button>
+                        </motion.button>
                       </div>
                     </td>
-                  </tr>
+                  </motion.tr>
                 )
               })}
             </tbody>
           </table>
-        </div>
+        </motion.div>
       )}
 
       {/* Create/Edit Modal */}
-      {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h2>{editingId ? 'Edit Election' : 'Create Election'}</h2>
+      <AnimatePresence>
+        {showModal && (
+          <motion.div
+            className="modal-overlay"
+            onClick={() => setShowModal(false)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="modal"
+              onClick={(e) => e.stopPropagation()}
+              initial={{ opacity: 0, scale: 0.8, y: 50 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: 50 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+            >
+              <h2>{editingId ? 'Edit Election' : 'Create Election'}</h2>
 
-            {error && <div className="alert alert-error">⚠️ {error}</div>}
+              {error && (
+                <motion.div className="alert alert-error" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
+                  ⚠️ {error}
+                </motion.div>
+              )}
 
-            <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label>Title</label>
-                <input
-                  type="text"
-                  name="title"
-                  className="form-control"
-                  value={formData.title}
-                  onChange={handleChange}
-                  placeholder="Election title"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Description</label>
-                <textarea
-                  name="description"
-                  className="form-control"
-                  value={formData.description}
-                  onChange={handleChange}
-                  placeholder="Optional description"
-                />
-              </div>
-              <div className="form-group">
-                <label>Start Date & Time</label>
-                <input
-                  type="datetime-local"
-                  name="startDate"
-                  className="form-control"
-                  value={formData.startDate}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>End Date & Time</label>
-                <input
-                  type="datetime-local"
-                  name="endDate"
-                  className="form-control"
-                  value={formData.endDate}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              <div className="modal-actions">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  {editingId ? 'Update' : 'Create'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
+              <form onSubmit={handleSubmit}>
+                <div className="form-group">
+                  <label>Title</label>
+                  <input type="text" name="title" className="form-control" value={formData.title} onChange={handleChange} placeholder="Election title" required />
+                </div>
+                <div className="form-group">
+                  <label>Description</label>
+                  <textarea name="description" className="form-control" value={formData.description} onChange={handleChange} placeholder="Optional description" />
+                </div>
+                <div className="form-group">
+                  <label>Start Date & Time</label>
+                  <input type="datetime-local" name="startDate" className="form-control" value={formData.startDate} onChange={handleChange} required />
+                </div>
+                <div className="form-group">
+                  <label>End Date & Time</label>
+                  <input type="datetime-local" name="endDate" className="form-control" value={formData.endDate} onChange={handleChange} required />
+                </div>
+                <div className="modal-actions">
+                  <motion.button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
+                    Cancel
+                  </motion.button>
+                  <motion.button type="submit" className="btn btn-primary" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
+                    {editingId ? 'Update' : 'Create'}
+                  </motion.button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </AnimatedPage>
   )
 }
 

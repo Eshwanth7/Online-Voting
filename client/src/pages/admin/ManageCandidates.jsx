@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import API from '../../api/axios'
+import AnimatedPage, { fadeInUp, staggerContainer, cardHover } from '../../components/AnimatedPage'
 
 function ManageCandidates() {
   const { electionId } = useParams()
@@ -85,12 +87,16 @@ function ManageCandidates() {
   }
 
   if (loading) {
-    return <div className="loading-container"><div className="spinner"></div></div>
+    return (
+      <div className="loading-container">
+        <motion.div className="spinner" initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'spring' }} />
+      </div>
+    )
   }
 
   return (
-    <div className="animate-in">
-      <div className="action-row">
+    <AnimatedPage>
+      <motion.div className="action-row" variants={fadeInUp}>
         <div>
           <h1>Manage Candidates</h1>
           <p style={{ color: 'var(--text-secondary)' }}>
@@ -98,37 +104,63 @@ function ManageCandidates() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <Link to="/admin/elections" className="btn btn-secondary">← Back</Link>
-          <button className="btn btn-primary" onClick={openCreate}>
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <Link to="/admin/elections" className="btn btn-secondary">← Back</Link>
+          </motion.div>
+          <motion.button
+            className="btn btn-primary"
+            onClick={openCreate}
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.95 }}
+          >
             + Add Candidate
-          </button>
+          </motion.button>
         </div>
-      </div>
+      </motion.div>
 
       {candidates.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-icon">👤</div>
+        <motion.div className="empty-state" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
+          <motion.div className="empty-icon" animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity }}>
+            👤
+          </motion.div>
           <p>No candidates added yet</p>
-        </div>
+        </motion.div>
       ) : (
-        <div className="grid-3">
-          {candidates.map(candidate => (
-            <div key={candidate._id} className="glass-card" style={{ textAlign: 'center' }}>
-              <div style={{
-                width: '70px',
-                height: '70px',
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, var(--accent), var(--accent-dark))',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 1rem',
-                fontSize: '1.8rem',
-                fontWeight: '700',
-                color: 'white'
-              }}>
+        <motion.div
+          className="grid-3"
+          variants={staggerContainer}
+          initial="initial"
+          animate="animate"
+        >
+          {candidates.map((candidate, index) => (
+            <motion.div
+              key={candidate._id}
+              className="glass-card"
+              style={{ textAlign: 'center' }}
+              variants={fadeInUp}
+              {...cardHover}
+            >
+              <motion.div
+                style={{
+                  width: '70px',
+                  height: '70px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, var(--accent), var(--accent-dark))',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 1rem',
+                  fontSize: '1.8rem',
+                  fontWeight: '700',
+                  color: 'white'
+                }}
+                initial={{ scale: 0, rotate: -180 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ delay: 0.2 + index * 0.08, type: 'spring', stiffness: 200 }}
+                whileHover={{ scale: 1.1, boxShadow: '0 0 20px rgba(99, 102, 241, 0.4)' }}
+              >
                 {candidate.name.charAt(0).toUpperCase()}
-              </div>
+              </motion.div>
               <h3>{candidate.name}</h3>
               <p style={{ color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>{candidate.party}</p>
               {candidate.description && (
@@ -140,73 +172,71 @@ function ManageCandidates() {
                 Votes: <strong style={{ color: 'var(--accent-light)' }}>{candidate.voteCount}</strong>
               </p>
               <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-                <button className="btn btn-secondary btn-sm" onClick={() => openEdit(candidate)}>
+                <motion.button className="btn btn-secondary btn-sm" onClick={() => openEdit(candidate)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                   Edit
-                </button>
-                <button className="btn btn-danger btn-sm" onClick={() => handleDelete(candidate._id)}>
+                </motion.button>
+                <motion.button className="btn btn-danger btn-sm" onClick={() => handleDelete(candidate._id)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                   Delete
-                </button>
+                </motion.button>
               </div>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
 
       {/* Create/Edit Modal */}
-      {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h2>{editingId ? 'Edit Candidate' : 'Add Candidate'}</h2>
+      <AnimatePresence>
+        {showModal && (
+          <motion.div
+            className="modal-overlay"
+            onClick={() => setShowModal(false)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="modal"
+              onClick={(e) => e.stopPropagation()}
+              initial={{ opacity: 0, scale: 0.8, y: 50 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: 50 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+            >
+              <h2>{editingId ? 'Edit Candidate' : 'Add Candidate'}</h2>
 
-            {error && <div className="alert alert-error">⚠️ {error}</div>}
+              {error && (
+                <motion.div className="alert alert-error" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
+                  ⚠️ {error}
+                </motion.div>
+              )}
 
-            <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label>Name</label>
-                <input
-                  type="text"
-                  name="name"
-                  className="form-control"
-                  value={formData.name}
-                  onChange={handleChange}
-                  placeholder="Candidate name"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Party</label>
-                <input
-                  type="text"
-                  name="party"
-                  className="form-control"
-                  value={formData.party}
-                  onChange={handleChange}
-                  placeholder="Party name (or Independent)"
-                />
-              </div>
-              <div className="form-group">
-                <label>Description</label>
-                <textarea
-                  name="description"
-                  className="form-control"
-                  value={formData.description}
-                  onChange={handleChange}
-                  placeholder="Brief description (optional)"
-                />
-              </div>
-              <div className="modal-actions">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  {editingId ? 'Update' : 'Add'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
+              <form onSubmit={handleSubmit}>
+                <div className="form-group">
+                  <label>Name</label>
+                  <input type="text" name="name" className="form-control" value={formData.name} onChange={handleChange} placeholder="Candidate name" required />
+                </div>
+                <div className="form-group">
+                  <label>Party</label>
+                  <input type="text" name="party" className="form-control" value={formData.party} onChange={handleChange} placeholder="Party name (or Independent)" />
+                </div>
+                <div className="form-group">
+                  <label>Description</label>
+                  <textarea name="description" className="form-control" value={formData.description} onChange={handleChange} placeholder="Brief description (optional)" />
+                </div>
+                <div className="modal-actions">
+                  <motion.button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
+                    Cancel
+                  </motion.button>
+                  <motion.button type="submit" className="btn btn-primary" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
+                    {editingId ? 'Update' : 'Add'}
+                  </motion.button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </AnimatedPage>
   )
 }
 

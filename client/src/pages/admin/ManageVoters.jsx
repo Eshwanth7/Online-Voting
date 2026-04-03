@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import API from '../../api/axios'
+import AnimatedPage, { fadeInUp } from '../../components/AnimatedPage'
 
 function ManageVoters() {
   const [voters, setVoters] = useState([])
@@ -32,27 +34,53 @@ function ManageVoters() {
   }
 
   if (loading) {
-    return <div className="loading-container"><div className="spinner"></div></div>
+    return (
+      <div className="loading-container">
+        <motion.div className="spinner" initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'spring' }} />
+      </div>
+    )
   }
 
   return (
-    <div className="animate-in">
-      <div className="page-header">
-        <h1>Manage Voters</h1>
-        <p style={{ color: 'var(--text-secondary)' }}>
+    <AnimatedPage>
+      <motion.div className="page-header" variants={fadeInUp}>
+        <motion.h1
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          Manage Voters
+        </motion.h1>
+        <motion.p
+          style={{ color: 'var(--text-secondary)' }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+        >
           {voters.length} registered user{voters.length !== 1 ? 's' : ''}
-        </p>
-      </div>
+        </motion.p>
+      </motion.div>
 
-      {error && <div className="alert alert-error">⚠️ {error}</div>}
+      {error && (
+        <motion.div className="alert alert-error" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
+          ⚠️ {error}
+        </motion.div>
+      )}
 
       {voters.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-icon">👥</div>
+        <motion.div className="empty-state" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
+          <motion.div className="empty-icon" animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity }}>
+            👥
+          </motion.div>
           <p>No registered voters yet</p>
-        </div>
+        </motion.div>
       ) : (
-        <div className="table-container">
+        <motion.div
+          className="table-container"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
           <table>
             <thead>
               <tr>
@@ -66,8 +94,14 @@ function ManageVoters() {
               </tr>
             </thead>
             <tbody>
-              {voters.map(voter => (
-                <tr key={voter._id}>
+              {voters.map((voter, index) => (
+                <motion.tr
+                  key={voter._id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 + index * 0.05 }}
+                  whileHover={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
+                >
                   <td style={{ fontWeight: '500' }}>{voter.name}</td>
                   <td>{voter.email}</td>
                   <td>{voter.phone}</td>
@@ -84,18 +118,23 @@ function ManageVoters() {
                   </td>
                   <td>
                     {voter.role !== 'admin' && (
-                      <button className="btn btn-danger btn-sm" onClick={() => handleDelete(voter._id)}>
+                      <motion.button
+                        className="btn btn-danger btn-sm"
+                        onClick={() => handleDelete(voter._id)}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
                         Delete
-                      </button>
+                      </motion.button>
                     )}
                   </td>
-                </tr>
+                </motion.tr>
               ))}
             </tbody>
           </table>
-        </div>
+        </motion.div>
       )}
-    </div>
+    </AnimatedPage>
   )
 }
 

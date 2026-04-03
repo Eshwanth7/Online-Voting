@@ -1,8 +1,14 @@
 import axios from 'axios'
 
+const baseURL = import.meta.env.VITE_API_URL || '/api'
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api'
+  baseURL: baseURL.endsWith('/') ? baseURL.slice(0, -1) : baseURL
 })
+
+if (baseURL.includes('your-backend-server-url')) {
+  console.warn('⚠️ Warning: VITE_API_URL appears to be using a placeholder URL. Please update it in your Vercel Environment Variables.')
+}
+
 
 // Add token to requests
 API.interceptors.request.use((config) => {

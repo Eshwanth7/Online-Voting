@@ -1,7 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const { generateOTP, getOTPExpiry, sendOTPEmail } = require('../utils/otp');
+const { generateOTP, getOTPExpiry, sendOTPEmail, sendResetPasswordEmail } = require('../utils/otp');
 const { protect } = require('../middleware/auth');
 
 const router = express.Router();
@@ -188,10 +188,70 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// POST /api/auth/forgot-password
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User with this email already exists but not found' }); 
+      // Shh, for security usually you say "if email exists, we sent it", but here we keep it simple
+    }
+
+    const otp = generateOTP();
+    user.resetPasswordOtp = otp;
+    user.resetPasswordExpires = getOTPExpiry();
+    await user.save();
+
+    const emailSent = await sendResetPasswordEmail(email, otp);
+
+    if (!emailSent) {
+      console.warn(`Forgot PW email failed to ${email}. Backup OTP: ${otp}`);
+      console.log(`\n========================================`);
+      console.log(`  RESET OTP for ${email}: ${otp}`);
+      console.log(`========================================\n`);
+    }
+
+    res.json({ message: 'Password reset OTP sent to your email.' });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// POST /api/auth/reset-password
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+
+    const user = await User.findOne({ 
+      email,
+      resetPasswordOtp: otp,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid or expired OTP' });
+    }
+
+    // Update password
+    user.password = newPassword;
+    user.resetPasswordOtp = null;
+    user.resetPasswordExpires = null;
+    await user.save();
+
+    res.json({ message: 'Password reset successful. You can now login.' });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // GET /api/auth/me
 router.get('/me', protect, async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select('-password -otp -otpExpires');
+    const user = await User.findById(req.user._id).select('-password -otp -otpExpires -resetPasswordOtp -resetPasswordExpires');
     res.json(user);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });

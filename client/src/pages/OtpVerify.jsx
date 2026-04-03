@@ -1,6 +1,8 @@
 import { useState, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import API from '../api/axios'
+import AnimatedPage, { fadeInUp } from '../components/AnimatedPage'
 
 function OtpVerify() {
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
@@ -60,7 +62,7 @@ function OtpVerify() {
     setSuccess('')
     try {
       await API.post('/auth/resend-otp', { email })
-      setSuccess('New OTP sent! Check the server console.')
+      setSuccess('New OTP sent! Check your email inbox.')
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to resend OTP')
     }
@@ -68,34 +70,73 @@ function OtpVerify() {
 
   if (!email) {
     return (
-      <div className="auth-container animate-in">
-        <div className="auth-card" style={{ textAlign: 'center' }}>
+      <AnimatedPage className="auth-container">
+        <motion.div className="auth-card" style={{ textAlign: 'center' }} variants={fadeInUp}>
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', stiffness: 200, damping: 12 }}
+          >
+            <span style={{ fontSize: '3rem' }}>📧</span>
+          </motion.div>
           <h1>OTP Verification</h1>
           <p className="subtitle">No email provided. Please register first.</p>
-          <button className="btn btn-primary" onClick={() => navigate('/register')}>
+          <motion.button
+            className="btn btn-primary"
+            onClick={() => navigate('/register')}
+            whileHover={{ scale: 1.04, y: -2 }}
+            whileTap={{ scale: 0.97 }}
+          >
             Go to Registration
-          </button>
-        </div>
-      </div>
+          </motion.button>
+        </motion.div>
+      </AnimatedPage>
     )
   }
 
   return (
-    <div className="auth-container animate-in">
-      <div className="auth-card">
-        <h1>Verify Your Email</h1>
-        <p className="subtitle">
-          Enter the 6-digit OTP sent to <strong>{email}</strong>
-          <br /><small style={{ color: 'var(--text-muted)' }}>(Check the server console for the OTP)</small>
-        </p>
+    <AnimatedPage className="auth-container">
+      <motion.div className="auth-card" variants={fadeInUp}>
+        <motion.div
+          style={{ textAlign: 'center', marginBottom: '0.5rem' }}
+          initial={{ scale: 0, rotate: -180 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.2 }}
+        >
+          <span style={{ fontSize: '3rem' }}>📧</span>
+        </motion.div>
 
-        {error && <div className="alert alert-error">{error}</div>}
-        {success && <div className="alert alert-success">{success}</div>}
+        <motion.h1 variants={fadeInUp}>Verify Your Email</motion.h1>
+        <motion.p className="subtitle" variants={fadeInUp}>
+          Enter the 6-digit OTP sent to <strong>{email}</strong>
+          <br /><small style={{ color: 'var(--text-muted)' }}>(Don't forget to check your spam folder)</small>
+        </motion.p>
+
+        {error && (
+          <motion.div
+            className="alert alert-error"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            {error}
+          </motion.div>
+        )}
+        {success && (
+          <motion.div
+            className="alert alert-success"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            {success}
+          </motion.div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <div className="otp-inputs">
             {otp.map((digit, index) => (
-              <input
+              <motion.input
                 key={index}
                 type="text"
                 maxLength={1}
@@ -104,18 +145,39 @@ function OtpVerify() {
                 onKeyDown={(e) => handleKeyDown(index, e)}
                 ref={(el) => (inputsRef.current[index] = el)}
                 autoFocus={index === 0}
+                initial={{ opacity: 0, y: 20, scale: 0.8 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ delay: 0.3 + index * 0.08, type: 'spring', stiffness: 300 }}
+                whileFocus={{
+                  borderColor: '#6366f1',
+                  boxShadow: '0 0 0 3px rgba(99, 102, 241, 0.3)',
+                  scale: 1.1,
+                }}
               />
             ))}
           </div>
 
-          <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
-            {loading ? 'Verifying...' : 'Verify OTP'}
-          </button>
+          <motion.button
+            type="submit"
+            className="btn btn-primary"
+            style={{ width: '100%' }}
+            disabled={loading}
+            variants={fadeInUp}
+            whileHover={!loading ? { scale: 1.02, y: -2 } : {}}
+            whileTap={!loading ? { scale: 0.98 } : {}}
+          >
+            {loading ? '⏳ Verifying...' : '✅ Verify OTP'}
+          </motion.button>
         </form>
 
-        <div className="auth-footer">
+        <motion.div
+          className="auth-footer"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.8 }}
+        >
           Didn't receive the OTP?{' '}
-          <button
+          <motion.button
             onClick={handleResend}
             style={{
               background: 'none',
@@ -125,12 +187,14 @@ function OtpVerify() {
               fontFamily: 'var(--font-family)',
               fontSize: '0.9rem'
             }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
           >
             Resend OTP
-          </button>
-        </div>
-      </div>
-    </div>
+          </motion.button>
+        </motion.div>
+      </motion.div>
+    </AnimatedPage>
   )
 }
 
