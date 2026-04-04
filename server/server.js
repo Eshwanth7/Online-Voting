@@ -11,6 +11,17 @@ const connectDB = require('./config/db');
 // Load environment variables
 dotenv.config();
 
+// ✅ Validate required env variables at startup
+const REQUIRED_ENV = ['MONGO_URI', 'JWT_SECRET'];
+const missingEnv = REQUIRED_ENV.filter(key => !process.env[key]);
+if (missingEnv.length > 0) {
+  console.error(`❌ Missing required environment variables: ${missingEnv.join(', ')}`);
+  console.error('Please set these in your Vercel Dashboard under Settings → Environment Variables');
+  if (process.env.NODE_ENV === 'production') {
+    process.exit(1);
+  }
+}
+
 // Connect to MongoDB
 try {
   connectDB();

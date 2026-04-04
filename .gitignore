@@ -32,3 +32,4 @@ test-email.js
 **/test-*.js
 
 .vercel
+.env*.local
