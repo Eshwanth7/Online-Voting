@@ -31,6 +31,10 @@ app.use(cors({
 app.use(express.json());
 
 // Routes
+app.get('/', (req, res) => {
+  res.send('Online Voting System API is running! Access the frontend at the main URL.');
+});
+
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/elections', require('./routes/elections'));
 app.use('/api/candidates', require('./routes/candidates'));
