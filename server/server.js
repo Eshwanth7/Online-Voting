@@ -22,7 +22,12 @@ app.use(async (req, res, next) => {
 });
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: '*', // Allow all origins for the mini-project scope
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: true
+}));
 app.use(express.json());
 
 // Routes

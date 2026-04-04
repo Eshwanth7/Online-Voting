@@ -14,7 +14,8 @@ const generateToken = (id) => {
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, phone, voterId, password } = req.body;
+    const { name, email: rawEmail, phone, voterId, password } = req.body;
+    const email = rawEmail?.toLowerCase().trim();
 
     // Check if user already exists
     const existingUser = await User.findOne({
@@ -69,7 +70,8 @@ router.post('/register', async (req, res) => {
 // POST /api/auth/verify-otp
 router.post('/verify-otp', async (req, res) => {
   try {
-    const { email, otp } = req.body;
+    const { email: rawEmail, otp } = req.body;
+    const email = rawEmail?.toLowerCase().trim();
 
     const user = await User.findOne({ email });
     if (!user) {
@@ -105,7 +107,8 @@ router.post('/verify-otp', async (req, res) => {
 // POST /api/auth/resend-otp
 router.post('/resend-otp', async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email: rawEmail } = req.body;
+    const email = rawEmail?.toLowerCase().trim();
 
     const user = await User.findOne({ email });
     if (!user) {
@@ -143,7 +146,8 @@ router.post('/resend-otp', async (req, res) => {
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email: rawEmail, password } = req.body;
+    const email = rawEmail?.toLowerCase().trim();
 
     // Find user by email
     const user = await User.findOne({ email });
@@ -191,7 +195,8 @@ router.post('/login', async (req, res) => {
 // POST /api/auth/forgot-password
 router.post('/forgot-password', async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email: rawEmail } = req.body;
+    const email = rawEmail?.toLowerCase().trim();
     const user = await User.findOne({ email });
 
     if (!user) {
@@ -223,7 +228,8 @@ router.post('/forgot-password', async (req, res) => {
 // POST /api/auth/reset-password
 router.post('/reset-password', async (req, res) => {
   try {
-    const { email, otp, newPassword } = req.body;
+    const { email: rawEmail, otp, newPassword } = req.body;
+    const email = rawEmail?.toLowerCase().trim();
 
     const user = await User.findOne({ 
       email,

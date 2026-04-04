@@ -50,9 +50,9 @@ function Register() {
 
   const formFields = [
     { id: 'name', label: 'Full Name', type: 'text', placeholder: 'Enter your full name' },
-    { id: 'email', label: 'Email Address', type: 'email', placeholder: 'Enter your email' },
+    { id: 'email', label: 'Email Address', type: 'email', placeholder: 'Enter your email', autoCapitalize: 'none', autoCorrect: 'off', spellCheck: 'false' },
     { id: 'phone', label: 'Phone Number', type: 'tel', placeholder: 'Enter your phone number' },
-    { id: 'voterId', label: 'Voter ID', type: 'text', placeholder: 'Enter your Voter ID' },
+    { id: 'voterId', label: 'Voter ID', type: 'text', placeholder: 'Enter your Voter ID', autoCapitalize: 'characters', autoCorrect: 'off', spellCheck: 'false' },
     { id: 'password', label: 'Password', type: 'password', placeholder: 'Create a password (min 6 characters)' },
     { id: 'confirmPassword', label: 'Confirm Password', type: 'password', placeholder: 'Confirm your password' },
   ]
@@ -96,11 +96,8 @@ function Register() {
             >
               <label htmlFor={field.id}>{field.label}</label>
               <motion.input
-                type={field.type}
-                id={field.id}
-                name={field.id}
+                {...field}
                 className="form-control"
-                placeholder={field.placeholder}
                 value={formData[field.id]}
                 onChange={handleChange}
                 required
