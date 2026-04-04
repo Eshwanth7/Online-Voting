@@ -21,12 +21,22 @@ function Login() {
       const user = await login(email, password)
       navigate(user.role === 'admin' ? '/admin' : '/dashboard')
     } catch (err) {
+      console.error('Login error detail:', err)
       const data = err.response?.data
+      const status = err.response?.status
+
       if (data?.needsVerification) {
         navigate('/verify-otp', { state: { email: data.email } })
         return
       }
-      setError(data?.message || 'Login failed')
+
+      if (status === 401 || status === 403) {
+        setError(data?.message || 'Invalid credentials')
+      } else if (!err.response) {
+        setError('Network error: Cannot reach the server. Please check your connection.')
+      } else {
+        setError(`Server error (${status}): ${data?.message || 'Login failed'}`)
+      }
     } finally {
       setLoading(false)
     }
