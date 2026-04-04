@@ -30,3 +30,5 @@ test-email.js
 **/test_*.js
 **/test-*-*.js
 **/test-*.js
+
+.vercel

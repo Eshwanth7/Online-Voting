@@ -1,0 +1,13 @@
+{
+  "name": "online-voting-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "client-install": "npm install --prefix client",
+    "server-install": "npm install --prefix server",
+    "client-dev": "cd client && npm run dev",
+    "server-dev": "cd server && npm run dev",
+    "dev": "npm run server-dev & npm run client-dev",
+    "build": "cd client && npm install && npm run build"
+  }
+}

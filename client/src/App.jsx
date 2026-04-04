@@ -1,6 +1,8 @@
+import { useEffect } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import { useAuth } from './context/AuthContext'
+import API from './api/axios'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -23,6 +25,19 @@ import AdminResults from './pages/admin/AdminResults'
 function App() {
   const { user } = useAuth()
   const location = useLocation()
+
+  // Pre-warm backend on load to eliminate Vercel cold starts
+  useEffect(() => {
+    const prewarm = async () => {
+      try {
+        await API.get('/health')
+        console.log('🗳️ Backend warmed up')
+      } catch (err) {
+        console.warn('Backend warm-up failed', err)
+      }
+    }
+    prewarm()
+  }, [])
 
   return (
     <div className="app">

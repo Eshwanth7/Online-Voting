@@ -200,8 +200,9 @@ router.post('/forgot-password', async (req, res) => {
     const user = await User.findOne({ email });
 
     if (!user) {
-      return res.status(404).json({ message: 'User with this email already exists but not found' }); 
-      // Shh, for security usually you say "if email exists, we sent it", but here we keep it simple
+      // For security, always return a success message if the email is well-formatted,
+      // to prevent "Account Enumeration" where hackers check which emails exist.
+      return res.json({ message: 'If an account exists with this email, a password reset OTP has been sent.' });
     }
 
     const otp = generateOTP();
@@ -218,7 +219,7 @@ router.post('/forgot-password', async (req, res) => {
       console.log(`========================================\n`);
     }
 
-    res.json({ message: 'Password reset OTP sent to your email.' });
+    res.json({ message: 'If an account exists with this email, a password reset OTP has been sent.' });
   } catch (error) {
     console.error('Forgot password error:', error);
     res.status(500).json({ message: 'Server error' });
