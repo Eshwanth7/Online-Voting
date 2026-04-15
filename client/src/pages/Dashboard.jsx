@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
@@ -10,32 +10,6 @@ function Dashboard() {
   const [elections, setElections] = useState([])
   const [loading, setLoading] = useState(true)
   const [votedMap, setVotedMap] = useState({})
-
-  useEffect(() => {
-    fetchElections()
-  }, [])
-
-  const fetchElections = async () => {
-    try {
-      const res = await API.get('/elections')
-      setElections(res.data)
-
-      const statusMap = {}
-      for (const el of res.data) {
-        try {
-          const statusRes = await API.get(`/votes/status/${el._id}`)
-          statusMap[el._id] = statusRes.data.hasVoted
-        } catch {
-          statusMap[el._id] = false
-        }
-      }
-      setVotedMap(statusMap)
-    } catch (err) {
-      console.error('Failed to fetch elections:', err)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const isOngoing = (el) => {
     const now = new Date()
@@ -55,6 +29,39 @@ function Dashboard() {
     if (isUpcoming(el)) return { label: 'Upcoming', class: 'badge-pending' }
     return { label: 'Ended', class: 'badge-inactive' }
   }
+
+  // Fix #12: fetch vote statuses in parallel with Promise.all instead of a sequential for-loop.
+  // Fix #20: useCallback ensures fetchElections is stable — won't cause infinite loops in useEffect.
+  const fetchElections = useCallback(async () => {
+    try {
+      const res = await API.get('/elections')
+      const electionList = res.data
+      setElections(electionList)
+
+      // Fetch all vote statuses in parallel — much faster than sequential loop
+      const statusResults = await Promise.all(
+        electionList.map(el =>
+          API.get(`/votes/status/${el._id}`)
+            .then(r => ({ id: el._id, hasVoted: r.data.hasVoted }))
+            .catch(() => ({ id: el._id, hasVoted: false }))
+        )
+      )
+
+      const statusMap = {}
+      statusResults.forEach(({ id, hasVoted }) => {
+        statusMap[id] = hasVoted
+      })
+      setVotedMap(statusMap)
+    } catch (err) {
+      console.error('Failed to fetch elections:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, []) // no deps — only runs once
+
+  useEffect(() => {
+    fetchElections()
+  }, [fetchElections])
 
   if (loading) {
     return (

@@ -32,9 +32,16 @@ router.post('/', protect, isAdmin, async (req, res) => {
   try {
     const { title, description, startDate, endDate } = req.body;
 
+    if (!title || !startDate || !endDate) {
+      return res.status(400).json({ message: 'Title, start date, and end date are required' });
+    }
+    if (new Date(startDate) >= new Date(endDate)) {
+      return res.status(400).json({ message: 'End date must be after start date' });
+    }
+
     const election = await Election.create({
-      title,
-      description,
+      title: title.trim(),
+      description: description?.trim() || '',
       startDate,
       endDate,
       createdBy: req.user._id
@@ -48,11 +55,27 @@ router.post('/', protect, isAdmin, async (req, res) => {
 });
 
 // PUT /api/elections/:id — Update election (admin)
+// Security: Only allow whitelisted fields — prevents overwriting createdBy, etc.
 router.put('/:id', protect, isAdmin, async (req, res) => {
   try {
+    const { title, description, startDate, endDate, isActive } = req.body;
+
+    // Validate dates if both provided
+    if (startDate && endDate && new Date(startDate) >= new Date(endDate)) {
+      return res.status(400).json({ message: 'End date must be after start date' });
+    }
+
+    // Build update object only from whitelisted fields
+    const updateFields = {};
+    if (title !== undefined) updateFields.title = title.trim();
+    if (description !== undefined) updateFields.description = description.trim();
+    if (startDate !== undefined) updateFields.startDate = startDate;
+    if (endDate !== undefined) updateFields.endDate = endDate;
+    if (isActive !== undefined) updateFields.isActive = Boolean(isActive);
+
     const election = await Election.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      updateFields,
       { new: true, runValidators: true }
     );
 

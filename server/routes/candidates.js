@@ -1,5 +1,6 @@
 const express = require('express');
 const Candidate = require('../models/Candidate');
+const Election = require('../models/Election');
 const { protect, isAdmin } = require('../middleware/auth');
 
 const router = express.Router();
@@ -20,10 +21,23 @@ router.post('/', protect, isAdmin, async (req, res) => {
   try {
     const { name, party, description, election } = req.body;
 
+    if (!name || typeof name !== 'string' || name.trim().length < 2) {
+      return res.status(400).json({ message: 'Candidate name must be at least 2 characters' });
+    }
+    if (!election) {
+      return res.status(400).json({ message: 'Election ID is required' });
+    }
+
+    // Verify the election exists
+    const electionDoc = await Election.findById(election);
+    if (!electionDoc) {
+      return res.status(404).json({ message: 'Election not found' });
+    }
+
     const candidate = await Candidate.create({
-      name,
-      party,
-      description,
+      name: name.trim(),
+      party: party?.trim() || 'Independent',
+      description: description?.trim() || '',
       election
     });
 
@@ -35,11 +49,20 @@ router.post('/', protect, isAdmin, async (req, res) => {
 });
 
 // PUT /api/candidates/:id — Update candidate (admin)
+// Security: Only allow whitelisted fields — prevents tampering with voteCount or election ref
 router.put('/:id', protect, isAdmin, async (req, res) => {
   try {
+    const { name, party, description } = req.body;
+
+    // Build update object only from whitelisted fields
+    const updateFields = {};
+    if (name !== undefined) updateFields.name = name.trim();
+    if (party !== undefined) updateFields.party = party.trim();
+    if (description !== undefined) updateFields.description = description.trim();
+
     const candidate = await Candidate.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      updateFields,
       { new: true, runValidators: true }
     );
 

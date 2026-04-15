@@ -1,33 +1,53 @@
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 
-// Generate a 6-digit OTP
+// ─── OTP Generation ───────────────────────────────────────────────────────────
+
+// Generate a cryptographically secure 6-digit OTP
 const generateOTP = () => {
   return crypto.randomInt(100000, 999999).toString();
 };
 
-// OTP expiry time (10 minutes)
+// OTP expiry time (10 minutes from now)
 const OTP_EXPIRY_MINUTES = 10;
-
 const getOTPExpiry = () => {
   return new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
 };
 
-// Send OTP via Email
+// Hash an OTP using SHA-256 before storing in the database.
+// OTPs are short-lived and randomly generated so SHA-256 is appropriate
+// (bcrypt would add unnecessary latency for this use case).
+const hashOTP = (otp) => {
+  return crypto.createHash('sha256').update(otp).digest('hex');
+};
+
+// Verify a plain OTP against its stored hash
+const verifyOTP = (plainOTP, storedHash) => {
+  const hash = crypto.createHash('sha256').update(plainOTP).digest('hex');
+  return crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(storedHash));
+};
+
+// ─── Email Transport (shared factory) ────────────────────────────────────────
+
+// Single factory function — avoids duplicating transporter config
+const createTransporter = () => {
+  return nodemailer.createTransport({
+    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.EMAIL_PORT || '587', 10),
+    secure: false, // true for port 465, false for 587
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+};
+
+// ─── Email Senders ────────────────────────────────────────────────────────────
+
 const sendOTPEmail = async (email, otp) => {
   try {
-    // Create a transporter using SMTP config from .env
-    const transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-      port: process.env.EMAIL_PORT || 587,
-      secure: false, // true for 465, false for other ports
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
+    const transporter = createTransporter();
 
-    // Email content
     const mailOptions = {
       from: `"VoteSecure" <${process.env.EMAIL_USER}>`,
       to: email,
@@ -47,27 +67,18 @@ const sendOTPEmail = async (email, otp) => {
       `,
     };
 
-    // Send the email
     const info = await transporter.sendMail(mailOptions);
     console.log(`Email sent successfully to ${email} (Message ID: ${info.messageId})`);
     return true;
   } catch (error) {
-    console.error('Error sending email:', error);
+    console.error('Error sending OTP email:', error);
     return false;
   }
 };
 
 const sendResetPasswordEmail = async (email, otp) => {
   try {
-    const transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-      port: process.env.EMAIL_PORT || 587,
-      secure: false,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
+    const transporter = createTransporter();
 
     const mailOptions = {
       from: `"VoteSecure Support" <${process.env.EMAIL_USER}>`,
@@ -89,7 +100,7 @@ const sendResetPasswordEmail = async (email, otp) => {
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log(`Reset Email sent successfully to ${email}`);
+    console.log(`Reset email sent successfully to ${email} (Message ID: ${info.messageId})`);
     return true;
   } catch (error) {
     console.error('Error sending reset email:', error);
@@ -97,4 +108,4 @@ const sendResetPasswordEmail = async (email, otp) => {
   }
 };
 
-module.exports = { generateOTP, getOTPExpiry, sendOTPEmail, sendResetPasswordEmail };
+module.exports = { generateOTP, getOTPExpiry, hashOTP, verifyOTP, sendOTPEmail, sendResetPasswordEmail };

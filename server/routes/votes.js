@@ -13,12 +13,16 @@ router.post('/', protect, async (req, res) => {
     const { electionId, candidateId } = req.body;
     const userId = req.user._id;
 
+    if (!electionId || !candidateId) {
+      return res.status(400).json({ message: 'Election ID and candidate ID are required' });
+    }
+
     // Check if user is verified
     if (!req.user.isVerified) {
       return res.status(403).json({ message: 'Please verify your account before voting' });
     }
 
-    // Check if election exists and is active
+    // Check if election exists and is currently active
     const election = await Election.findById(electionId);
     if (!election) {
       return res.status(404).json({ message: 'Election not found' });
@@ -35,31 +39,33 @@ router.post('/', protect, async (req, res) => {
       return res.status(400).json({ message: 'Invalid candidate for this election' });
     }
 
-    // Check if user already voted in this election
+    // Check if user already voted (before creating the vote document)
     const existingVote = await Vote.findOne({ voter: userId, election: electionId });
     if (existingVote) {
       return res.status(400).json({ message: 'You have already voted in this election' });
     }
 
-    // Cast the vote
+    // ── Atomic-safe vote creation ─────────────────────────────────────────────
+    // Step 1: Create the Vote document first. If this fails, voteCount is NOT touched.
+    // Step 2: Only then increment voteCount and update votedElections.
+    // This prevents voteCount from being dirty if vote creation fails.
+
     const vote = await Vote.create({
       voter: userId,
       election: electionId,
       candidate: candidateId
     });
 
-    // Increment candidate vote count
-    await Candidate.findByIdAndUpdate(candidateId, { $inc: { voteCount: 1 } });
-
-    // Track voted election on user
-    await User.findByIdAndUpdate(userId, {
-      $addToSet: { votedElections: electionId }
-    });
+    // Step 2: Both updates proceed now that the vote is confirmed
+    await Promise.all([
+      Candidate.findByIdAndUpdate(candidateId, { $inc: { voteCount: 1 } }),
+      User.findByIdAndUpdate(userId, { $addToSet: { votedElections: electionId } })
+    ]);
 
     res.status(201).json({ message: 'Vote cast successfully!' });
 
   } catch (error) {
-    // Handle duplicate vote (compound index)
+    // MongoDB compound unique index catches race-condition double votes
     if (error.code === 11000) {
       return res.status(400).json({ message: 'You have already voted in this election' });
     }
@@ -75,7 +81,6 @@ router.get('/status/:electionId', protect, async (req, res) => {
       voter: req.user._id,
       election: req.params.electionId
     });
-
     res.json({ hasVoted: !!vote });
   } catch (error) {
     res.status(500).json({ message: 'Server error' });

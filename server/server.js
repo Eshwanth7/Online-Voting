@@ -22,14 +22,12 @@ if (missingEnv.length > 0) {
   }
 }
 
-// Connect to MongoDB
-try {
-  connectDB();
-} catch (e) {
-  console.error("DB Init failed", e);
-}
+// Connect to MongoDB once at startup
+connectDB();
 
 const app = express();
+
+// ─── Security Middleware ──────────────────────────────────────────────────────
 
 // Secure HTTP headers
 app.use(helmet());
@@ -43,32 +41,29 @@ app.use(xss());
 // Prevent HTTP parameter pollution
 app.use(hpp());
 
-// Rate limiting
+// ─── Rate Limiting ────────────────────────────────────────────────────────────
+
+// General API rate limit
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per window
+  max: 100,
   message: 'Too many requests from this IP, please try again after 15 minutes'
 });
-
-// App wide rate-limiting (optional, but good for DDoS)
 app.use('/api', limiter);
 
-// Harder rate limit for auth (Login/Signup)
+// Stricter rate limit for auth routes (login, register, OTP)
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 mins
-  max: 20, // max 20 attempts
-  message: 'Too many login attempts. Please wait 15 minutes.'
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: 'Too many attempts. Please wait 15 minutes.'
 });
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
+app.use('/api/auth/resend-otp', authLimiter);    // ← added — was missing
+app.use('/api/auth/forgot-password', authLimiter); // ← added — was missing
 
-// Middleware to ensure DB connection
-app.use(async (req, res, next) => {
-  await connectDB();
-  next();
-});
+// ─── CORS ─────────────────────────────────────────────────────────────────────
 
-// Middleware
 const allowedOrigins = [
   'https://online-voting-smoky.vercel.app',
   'https://online-voting7.vercel.app',
@@ -78,7 +73,7 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+    if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -88,9 +83,12 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   credentials: true
 }));
-app.use(express.json({ limit: '10kb' })); // Body limit to prevent large payload attacks
 
-// Routes
+// Body limit to prevent large payload attacks
+app.use(express.json({ limit: '10kb' }));
+
+// ─── Routes ───────────────────────────────────────────────────────────────────
+
 app.get('/', (req, res) => {
   res.send('Online Voting System API is running! Access the frontend at the main URL.');
 });
@@ -104,18 +102,24 @@ app.use('/api/users', require('./routes/users'));
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Online Voting System API is running' });
+  res.json({
+    status: 'OK',
+    message: 'Online Voting System API is running',
+    db: require('mongoose').connection.readyState === 1 ? 'connected' : 'disconnected'
+  });
 });
 
-// Error handling middleware
+// ─── Error Handling ───────────────────────────────────────────────────────────
+
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ message: 'Something went wrong!' });
 });
 
+// ─── Server startup (dev only) ────────────────────────────────────────────────
+
 if (process.env.NODE_ENV !== 'production') {
   const PORT = process.env.PORT || 5000;
-
   app.listen(PORT, () => {
     console.log(`\n🗳️  Online Voting System Server`);
     console.log(`   Running on port ${PORT}`);

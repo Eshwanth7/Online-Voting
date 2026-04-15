@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import API from '../api/axios'
@@ -9,10 +9,30 @@ function OtpVerify() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
+  const [redirectCountdown, setRedirectCountdown] = useState(null)
   const inputsRef = useRef([])
   const navigate = useNavigate()
   const location = useLocation()
   const email = location.state?.email || ''
+
+  // Fix #17: Auto-redirect to /register after 3 seconds if no email in state
+  // (user navigated directly to /verify-otp without registering first)
+  useEffect(() => {
+    if (!email) {
+      setRedirectCountdown(3)
+      const interval = setInterval(() => {
+        setRedirectCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(interval)
+            navigate('/register', { replace: true })
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+      return () => clearInterval(interval)
+    }
+  }, [email, navigate])
 
   const handleChange = (index, value) => {
     if (value.length > 1) value = value[0]
@@ -22,7 +42,6 @@ function OtpVerify() {
     newOtp[index] = value
     setOtp(newOtp)
 
-    // Auto-focus next input
     if (value && index < 5) {
       inputsRef.current[index + 1]?.focus()
     }
@@ -68,6 +87,7 @@ function OtpVerify() {
     }
   }
 
+  // Show redirect message if no email (user came here directly)
   if (!email) {
     return (
       <AnimatedPage className="auth-container">
@@ -81,6 +101,15 @@ function OtpVerify() {
           </motion.div>
           <h1>OTP Verification</h1>
           <p className="subtitle">No email provided. Please register first.</p>
+          {redirectCountdown !== null && (
+            <motion.p
+              style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem' }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              Redirecting to registration in {redirectCountdown}s...
+            </motion.p>
+          )}
           <motion.button
             className="btn btn-primary"
             onClick={() => navigate('/register')}
@@ -139,6 +168,7 @@ function OtpVerify() {
               <motion.input
                 key={index}
                 type="text"
+                inputMode="numeric"
                 maxLength={1}
                 value={digit}
                 onChange={(e) => handleChange(index, e.target.value)}

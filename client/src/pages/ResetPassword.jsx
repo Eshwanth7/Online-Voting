@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useLocation, useNavigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import API from '../api/axios'
@@ -18,11 +18,13 @@ function ResetPassword() {
   const location = useLocation()
   const navigate = useNavigate()
 
-  useState(() => {
+  // Fix #8: was incorrectly using useState(() => {}, []) — which does nothing.
+  // useEffect is the correct hook for running side-effects after mount.
+  useEffect(() => {
     if (location.state?.email) {
       setData(prev => ({ ...prev, email: location.state.email }))
     }
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleOtpChange = (index, value) => {
     if (value.length > 1) value = value[0]
@@ -30,7 +32,7 @@ function ResetPassword() {
 
     const newOtp = [...data.otp]
     newOtp[index] = value
-    setData({ ...data, otp: newOtp })
+    setData(prev => ({ ...prev, otp: newOtp }))
 
     if (value && index < 5) {
       inputsRef.current[index + 1]?.focus()
@@ -52,7 +54,6 @@ function ResetPassword() {
       setError('Passwords do not match')
       return
     }
-
     if (data.newPassword.length < 6) {
       setError('Password must be at least 6 characters')
       return
@@ -60,7 +61,7 @@ function ResetPassword() {
 
     const otpString = data.otp.join('')
     if (otpString.length !== 6) {
-      setError('Please enter the 6-digit OTP')
+      setError('Please enter the complete 6-digit OTP')
       return
     }
 
@@ -117,7 +118,10 @@ function ResetPassword() {
                 className="form-control"
                 placeholder="Enter your email"
                 value={data.email}
-                onChange={(e) => setData({ ...data, email: e.target.value })}
+                onChange={(e) => setData(prev => ({ ...prev, email: e.target.value }))}
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck="false"
                 required
               />
             </motion.div>
@@ -130,6 +134,7 @@ function ResetPassword() {
                 <input
                   key={index}
                   type="text"
+                  inputMode="numeric"
                   maxLength={1}
                   className="form-control"
                   style={{ width: '40px', textAlign: 'center', padding: '0.5rem 0' }}
@@ -150,7 +155,7 @@ function ResetPassword() {
               className="form-control"
               placeholder="Min 6 characters"
               value={data.newPassword}
-              onChange={(e) => setData({ ...data, newPassword: e.target.value })}
+              onChange={(e) => setData(prev => ({ ...prev, newPassword: e.target.value }))}
               required
             />
           </motion.div>
@@ -162,7 +167,7 @@ function ResetPassword() {
               className="form-control"
               placeholder="Confirm new password"
               value={data.confirmPassword}
-              onChange={(e) => setData({ ...data, confirmPassword: e.target.value })}
+              onChange={(e) => setData(prev => ({ ...prev, confirmPassword: e.target.value }))}
               required
             />
           </motion.div>
@@ -176,7 +181,8 @@ function ResetPassword() {
             whileHover={{ scale: 1.02, y: -2 }}
             whileTap={{ scale: 0.98 }}
           >
-            {loading ? '⏳ Reseting...' : 'Reset Password'}
+            {/* Fix #9: was "Reseting" (typo), now "Resetting" */}
+            {loading ? '⏳ Resetting...' : 'Reset Password'}
           </motion.button>
         </form>
 

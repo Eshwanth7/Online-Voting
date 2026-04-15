@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import API from '../api/axios'
 
 const AuthContext = createContext(null)
@@ -11,18 +11,27 @@ export const useAuth = () => {
   return context
 }
 
+// Module-level ref so the axios interceptor can call logout without
+// importing the context (which would create a circular dependency).
+// This avoids stale React state when a 401 is received mid-session.
+export const logoutRef = { current: null }
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
-  const [token, setToken] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  // Load from localStorage on mount
+  // Restore session from localStorage on mount
   useEffect(() => {
     const savedToken = localStorage.getItem('token')
     const savedUser = localStorage.getItem('user')
     if (savedToken && savedUser) {
-      setToken(savedToken)
-      setUser(JSON.parse(savedUser))
+      try {
+        setUser(JSON.parse(savedUser))
+      } catch {
+        // Corrupted user data — clear it
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+      }
     }
     setLoading(false)
   }, [])
@@ -32,7 +41,6 @@ export const AuthProvider = ({ children }) => {
     const { token: newToken, user: userData } = res.data
     localStorage.setItem('token', newToken)
     localStorage.setItem('user', JSON.stringify(userData))
-    setToken(newToken)
     setUser(userData)
     return userData
   }
@@ -42,16 +50,20 @@ export const AuthProvider = ({ children }) => {
     return res.data
   }
 
-  const logout = () => {
+  // useCallback so logoutRef.current is always the latest stable reference
+  const logout = useCallback(() => {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
-    setToken(null)
     setUser(null)
-  }
+  }, [])
+
+  // Keep the module-level ref in sync with the latest logout function
+  useEffect(() => {
+    logoutRef.current = logout
+  }, [logout])
 
   const value = {
     user,
-    token,
     loading,
     login,
     register,

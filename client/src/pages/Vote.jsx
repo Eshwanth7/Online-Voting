@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import API from '../api/axios'
@@ -17,26 +17,40 @@ function Vote() {
   const [showConfirm, setShowConfirm] = useState(false)
   const [hasVoted, setHasVoted] = useState(false)
 
+  // Fix #19: inline fetchData inside useEffect to avoid stale closure and
+  // incorrect dependency array warnings in strict mode.
   useEffect(() => {
-    fetchData()
-  }, [electionId])
+    let cancelled = false
 
-  const fetchData = async () => {
-    try {
-      const [elRes, canRes, statusRes] = await Promise.all([
-        API.get(`/elections/${electionId}`),
-        API.get(`/candidates/election/${electionId}`),
-        API.get(`/votes/status/${electionId}`)
-      ])
-      setElection(elRes.data)
-      setCandidates(canRes.data)
-      setHasVoted(statusRes.data.hasVoted)
-    } catch (err) {
-      setError('Failed to load election data')
-    } finally {
-      setLoading(false)
+    const fetchData = async () => {
+      try {
+        const [elRes, canRes, statusRes] = await Promise.all([
+          API.get(`/elections/${electionId}`),
+          API.get(`/candidates/election/${electionId}`),
+          API.get(`/votes/status/${electionId}`)
+        ])
+        if (!cancelled) {
+          setElection(elRes.data)
+          setCandidates(canRes.data)
+          setHasVoted(statusRes.data.hasVoted)
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError('Failed to load election data')
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
     }
-  }
+
+    fetchData()
+
+    // Cleanup: if the component unmounts before the fetch completes,
+    // ignore the results to avoid setting state on an unmounted component.
+    return () => { cancelled = true }
+  }, [electionId])
 
   const handleVote = async () => {
     setSubmitting(true)
@@ -101,22 +115,14 @@ function Vote() {
               background: ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#818cf8', '#34d399'][i % 6],
               pointerEvents: 'none',
             }}
-            initial={{
-              top: '50%',
-              left: '50%',
-              opacity: 1,
-            }}
+            initial={{ top: '50%', left: '50%', opacity: 1 }}
             animate={{
               top: `${Math.random() * 100}%`,
               left: `${Math.random() * 100}%`,
               opacity: 0,
               scale: [1, 2, 0],
             }}
-            transition={{
-              duration: 1.5,
-              delay: i * 0.05,
-              ease: 'easeOut',
-            }}
+            transition={{ duration: 1.5, delay: i * 0.05, ease: 'easeOut' }}
           />
         ))}
 
@@ -177,17 +183,13 @@ function Vote() {
         initial="initial"
         animate="animate"
       >
-        {candidates.map((candidate, index) => (
+        {candidates.map((candidate) => (
           <motion.div
             key={candidate._id}
             className={`candidate-card ${selected === candidate._id ? 'selected' : ''}`}
             onClick={() => setSelected(candidate._id)}
             variants={fadeInUp}
-            whileHover={{
-              y: -8,
-              scale: 1.03,
-              transition: { duration: 0.2 },
-            }}
+            whileHover={{ y: -8, scale: 1.03, transition: { duration: 0.2 } }}
             whileTap={{ scale: 0.98 }}
             animate={selected === candidate._id ? {
               borderColor: '#6366f1',
